@@ -1,69 +1,47 @@
-name: Build Application
+name: Simple Build
 
 on:
   push:
-    branches: [ main ]
-  release:
-    types: [created]
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  build-simple:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.10'
+    
     - name: Install dependencies
       run: |
         pip install PyQt5 python-docx pillow pyinstaller
-    - name: Build Windows EXE
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          sudo apt-get update
+          sudo apt-get install -y python3-pyqt5
+        fi
+    
+    - name: Build
       run: |
-        pyinstaller --onefile --windowed --name=QuestionApp question_app.py
-    - uses: actions/upload-artifact@v3
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          pyinstaller --onefile --windowed --name=QuestionApp question_app.py
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          pyinstaller --name="QuestionApp" --windowed --onefile question_app.py
+        else
+          pyinstaller --onefile --name=QuestionApp question_app.py
+        fi
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
       with:
-        name: QuestionApp-Windows
-        path: dist/QuestionApp.exe
-
-  build-macos:
-    runs-on: macos-latest
-    steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-    - name: Install dependencies
-      run: |
-        pip install PyQt5 python-docx pillow pyinstaller
-    - name: Build macOS App
-      run: |
-        pyinstaller --name="QuestionApp" --windowed --onefile question_app.py
-        mkdir -p "QuestionApp.app/Contents/MacOS"
-        mv "dist/QuestionApp" "QuestionApp.app/Contents/MacOS/"
-    - uses: actions/upload-artifact@v3
-      with:
-        name: QuestionApp-macOS
-        path: QuestionApp.app
-
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y python3-pyqt5
-        pip install python-docx pillow pyinstaller
-    - name: Build Linux App
-      run: |
-        pyinstaller --onefile --name=QuestionApp question_app.py
-    - uses: actions/upload-artifact@v3
-      with:
-        name: QuestionApp-Linux
-        path: dist/QuestionApp
+        name: QuestionApp-${{ runner.os }}
+        path: |
+          dist/*
+          *.app

@@ -22,11 +22,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
-          pip install -r requirements.txt
 
       - name: Build macOS app
         run: |
-          pyinstaller --noconfirm --windowed --name "QuestionApp" main.py
+          pyinstaller --noconfirm --windowed --name "QuestionApp" question_app.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
